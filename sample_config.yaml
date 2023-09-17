@@ -1,0 +1,198 @@
+esphome:
+  name: sample-config
+  friendly_name: Sample DeskMaster Config
+
+  on_boot:
+    then:
+      - switch.turn_on: passthrough
+
+esp8266:
+  board: d1_mini_lite
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "N1P0bH3yk7aiArjfAp4kTlSAVTw/4yHqvGDrd07T/4k="
+
+ota:
+  password: "409bcec2c8b2e6147bc4f9b9b42c4012"
+
+wifi:
+  ssid: "YOUR_WIFI"
+  password: "YOUR_PASSWORD"
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Sample-Config Fallback Hotspot"
+    password: "thisisabadpassword"
+
+captive_portal:
+
+web_server:
+  port: 80
+  log: False
+
+external_components:
+  - source:
+      type: local
+      path: components/
+
+substitutions:
+  # pins connecting to desk controller
+  desk_ctl_RX: GPIO1 # pin is silkscreened "TX"
+  desk_ctl_UP: GPIO12
+  desk_ctl_DOWN: GPIO13
+  desk_ctl_2: GPIO14
+  desk_ctl_M: GPIO5
+  # pins connecting to user display/buttons
+  desk_dsp_TX: GPIO3 # pin is silkscreened "RX"
+  desk_dsp_UP: GPIO0
+  desk_dsp_DOWN: GPIO2
+  desk_dsp_2: GPIO4
+  # pins shared between controller and display
+  desk_ctl_dsp_REQ: GPIO16
+
+deskmaster:
+  id: desk_main
+
+  height:
+    name: Desk Height
+    id: desk_height
+
+uart:
+  - id: desk_uart
+    baud_rate: 9600
+    rx_pin: ${desk_ctl_RX}
+    tx_pin: ${desk_dsp_TX}
+    # You can uncomment the debug section below to see UART messages.
+    # debug:
+    #   direction: RX
+    #   dummy_receiver: true
+    #   after:
+    #     bytes: 4
+    #   sequence:
+    #     # - lambda: UARTDebug::log_int(direction, bytes, ',');
+    #     - if:
+    #         condition:
+    #           switch.is_on: passthrough
+    #         then:
+    #           uart.write:
+    #             id: desk_uart
+    #             data: !lambda "return bytes;"
+
+button:
+  #Stop movement
+  - platform: template
+    name: Stop Desk
+    id: desky_stop_desk
+    on_press:
+      then:
+        - switch.turn_off: ctl_up
+        - switch.turn_off: ctl_down
+        - switch.turn_off: ctl_2
+        - switch.turn_off: ctl_m
+
+binary_sensor:
+  ####################
+  #  INPUT/DISPLAY   #
+  ####################
+  - platform: gpio
+    id: dsp_up
+    pin:
+      number: ${desk_dsp_UP}
+      inverted: true
+    on_state:
+      then:
+        if:
+          condition:
+            - switch.is_on: passthrough
+          then:
+            - lambda: "x ? id(ctl_up).turn_on() : id(ctl_up).turn_off();"
+
+  - platform: gpio
+    id: dsp_down
+    pin:
+      number: ${desk_dsp_DOWN}
+      inverted: true
+    on_state:
+      then:
+        if:
+          condition:
+            - switch.is_on: passthrough
+          then:
+            - lambda: "x ? id(ctl_down).turn_on() : id(ctl_down).turn_off();"
+
+  - platform: gpio
+    id: dsp_2
+    pin:
+      number: ${desk_dsp_2}
+      inverted: true
+      mode: INPUT_PULLUP
+    on_state:
+      then:
+        if:
+          condition:
+            - switch.is_on: passthrough
+          then:
+            - lambda: "x ? id(ctl_2).turn_on() : id(ctl_2).turn_off();"
+
+switch:
+  - platform: template
+    id: passthrough
+    name: Passthrough Display Control
+    optimistic: True
+    entity_category: config
+
+  ####################
+  #  OUTPUT/CONTROL  #
+  ####################
+  - platform: gpio
+    #wake up ther desk and request it sends its height
+    id: ctl_dsp_req
+    name: "Request Desk Height"
+    pin:
+      number: ${desk_ctl_dsp_REQ}
+      inverted: true
+      # mode:
+      #   open_drain: True
+      #   output: True
+    on_turn_on:
+      - delay: 100ms
+      - switch.turn_off: ctl_dsp_req
+
+  - platform: gpio
+    id: preset_2
+    name: "Preset 2"
+    pin:
+      number: ${desk_ctl_2}
+      inverted: true
+  #Raise the desk
+  - platform: gpio
+    id: ctl_up
+    name: "Raise Desk"
+    pin:
+      number: ${desk_ctl_UP}
+      inverted: true
+  #Lower the desk
+  - platform: gpio
+    id: ctl_down
+    name: "Lower Desk"
+    pin:
+      number: ${desk_ctl_DOWN}
+      inverted: true
+  - platform: gpio
+    id: ctl_2
+    name: "Preset 2"
+    pin:
+      number: ${desk_ctl_2}
+      inverted: true
+
+  - platform: gpio
+    id: ctl_m
+    name: "M Button"
+    pin:
+      number: ${desk_ctl_M}
+      inverted: true
