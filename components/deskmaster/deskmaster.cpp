@@ -104,8 +104,16 @@ void DeskMaster::read_uart(){
   this->read_uart_sw();
   return;
 
+  const uint32_t now = millis();
+  static uint32_t last_byte_received = 0;
+
   static uint8_t data_index = 0; // value will remain between 0 and 3 inclusive
   static uint8_t uart_data[] = {0,0,0,0};
+
+  // if a new byte has not been received in RX_INTERVAL_TIMEOUT ms, clear the buffer
+  if (now - last_byte_received >= RX_INTERVAL_TIMEOUT)
+    uart_data[0] = uart_data[1] = uart_data[2] = uart_data[3] = 0;
+
 
   while (this->available()) {
     this->read_byte(&(uart_data[data_index]));
@@ -114,7 +122,28 @@ void DeskMaster::read_uart(){
       this->write_byte(uart_data[data_index]);
     }
 
-    // TODO implement a hardware-only read handler
+    // if there is a full buffer, parse/use the data
+    if (data_index == 3){
+      // height data
+      if (uart_data[1] == 1 && uart_data[2] == 1){
+        uint16_t height = (uart_data[2] << 8) + uart_data[3];
+        ESP_LOGD(TAG, "height value: %hu", height); // TODO remove
+        // only update the height if it has changed
+        if (this->current_pos_ != height) {
+          // filter out erroneous heights (too large of a delta to be possible)
+          if (this->current_pos_ == 0 || (this->current_pos_ - height < HEIGHT_MAX_DIFF && height - this->current_pos_ < HEIGHT_MAX_DIFF)){
+            this->current_pos_ = height;
+            if (this->height_sensor_ != nullptr)
+              this->height_sensor_->publish_state(height);
+          } else {
+            ESP_LOGD(TAG, "bad height of %d, ignoring", height);
+          }
+        }
+      }
+      else if (false){
+        // TODO handle other data/commands from the controller
+      }
+    }
 
     data_index = (data_index + 1) % 4;
   }
@@ -147,6 +176,7 @@ void DeskMaster::read_uart_sw(){
         if (curr == 1)
           data_index++;
         else
+          // ESP_LOGD(TAG, "having to re-sync UART at index %d with data %d", data_index, uart_data[data_index]);
           data_index = 0;
         break;
       case 2:

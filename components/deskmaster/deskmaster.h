@@ -8,6 +8,7 @@
 namespace esphome {
 namespace deskmaster {
 #define HEIGHT_MAX_DIFF 15
+#define RX_INTERVAL_TIMEOUT 200
 
 // TODO change to switch
 #define PASSTHROUGH true
