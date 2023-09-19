@@ -7,6 +7,10 @@
 
 namespace esphome {
 namespace deskmaster {
+#define HEIGHT_MAX_DIFF 15
+
+// TODO change to switch
+#define PASSTHROUGH true
 
 enum DMOperation : uint8_t {
   DM_OPERATION_IDLE = 0,
@@ -36,6 +40,12 @@ class DeskMaster: public Component, public sensor::Sensor, public uart::UARTDevi
     DMOperation current_operation{DM_OPERATION_IDLE};
 
   protected:
+    void send_height(uint16_t height);
+    void read_uart();
+    void read_uart_sw();
+
+    void (DeskMaster::*uart_rx_handler)(); // function pointer which is either read_uart or read_uart_sw
+
     sensor::Sensor *height_sensor_{nullptr};
     GPIOPin *up_pin_{nullptr};
     GPIOPin *down_pin_{nullptr};

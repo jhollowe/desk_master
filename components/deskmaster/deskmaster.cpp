@@ -28,42 +28,20 @@ void DeskMaster::setup() {
     this->request_pin_->digital_write(true);
     this->request_time_ = millis();
   }
+  // if (this->hw_serial_ != nullptr )
+  if (false) // TODO fix this
+    this->uart_rx_handler = &DeskMaster::read_uart;
+  else
+    this->uart_rx_handler = &DeskMaster::read_uart_sw;
+
+  // TODO bounce the request pin (if present) to get the current height
 }
 
 void DeskMaster::loop() {
-  static int state = 0;
-  static uint8_t high_byte;
 
-  while (this->available()) {
-    uint8_t c;
-    int value;
-    this->read_byte(&c);
-    switch (state) {
-      case 0:
-        if (c == 1)
-          state = 1;
-        break;
-      case 1:
-        if (c == 1)
-          state = 2;
-        else
-          state = 0;
-        break;
-      case 2:
-        high_byte = c;
-        state = 3;
-        break;
-      case 3:
-        value = (high_byte << 8) + c;
-        if (this->current_pos_ != value) {
-          this->current_pos_ = value;
-          if (this->height_sensor_ != nullptr)
-            this->height_sensor_->publish_state(value);
-        }
-        state = 0;
-        break;
-    }
-  }
+  // call the correct UART receive handler based on if this is using HW or SW UART
+  // SW provides limited functionality since it is less reliable and more has to be done to sanitize the data
+  (this->*uart_rx_handler)();
 
   if (this->target_pos_ >= 0) {
     if (abs(this->target_pos_ - this->current_pos_) < this->stopping_distance_)
@@ -111,7 +89,87 @@ void DeskMaster::stop() {
     this->up_pin_->digital_write(false);
   if (this->down_pin_ != nullptr)
     this->down_pin_->digital_write(false);
+  // TODO clear preset2 button
   this->current_operation = DM_OPERATION_IDLE;
+}
+
+void DeskMaster::send_height(uint16_t height){
+  // TODO fix compiler warning
+  uint8_t data[] = {1,1,(height & 0xff00) >> 8, height & 0xff};
+  this->write_array(data, 4);
+}
+
+void DeskMaster::read_uart(){
+  // TODO implement a hardware-only read handler
+  this->read_uart_sw();
+  return;
+
+  static uint8_t data_index = 0; // value will remain between 0 and 3 inclusive
+  static uint8_t uart_data[] = {0,0,0,0};
+
+  while (this->available()) {
+    this->read_byte(&(uart_data[data_index]));
+
+    if (PASSTHROUGH) {
+      this->write_byte(uart_data[data_index]);
+    }
+
+    // TODO implement a hardware-only read handler
+
+    data_index = (data_index + 1) % 4;
+  }
+}
+
+/// @brief Reads height data from the UART using the ESP8266's software UART.
+// This is done to support pin configuration which do not use the HW UART's pins.
+// The SW UART supports 5v RX while the HW UART requires 3.3v RX
+// Since the SW UART is less reliable, it only supports reading the height
+void DeskMaster::read_uart_sw(){
+  static uint8_t data_index = 0; // value will remain between 0 and 3 inclusive
+  static uint8_t high_byte;
+
+  while (this->available()) {
+    uint8_t curr;
+    // read the next byte from UART and place in the current index
+    this->read_byte(&curr);
+
+    if (PASSTHROUGH) {
+      this->write_byte(curr);
+    }
+
+    // ESP_LOGD(TAG, "%d: 0b" BYTE_TO_BINARY_PATTERN " (0x%02X)", data_index, BYTE_TO_BINARY(uart_data[data_index]), uart_data[data_index]);
+
+    // switch needed to help validate and align the data to the 4-byte data packet
+    // since SW UART can miss some bits/bytes
+    switch (data_index) {
+      case 0:
+      case 1:
+        if (curr == 1)
+          data_index++;
+        else
+          data_index = 0;
+        break;
+      case 2:
+        high_byte = curr;
+        data_index = 3;
+        break;
+      case 3:
+        uint16_t height = (high_byte << 8) + curr;
+        // only update the height if it has changed
+        if (this->current_pos_ != height) {
+          // filter out erroneous heights (too large of a delta to be possible)
+          if (this->current_pos_ == 0 || (this->current_pos_ - height < HEIGHT_MAX_DIFF && height - this->current_pos_ < HEIGHT_MAX_DIFF)){
+            this->current_pos_ = height;
+            if (this->height_sensor_ != nullptr)
+              this->height_sensor_->publish_state(height);
+          } else {
+            ESP_LOGD(TAG, "bad height of %d, ignoring", height);
+          }
+        }
+        data_index = 0;
+        break;
+    }
+  }
 }
 
 }  // namespace deskmaster
