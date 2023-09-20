@@ -29,7 +29,7 @@ void DeskMaster::setup() {
     this->request_time_ = millis();
   }
   // if (this->hw_serial_ != nullptr )
-  if (false) // TODO fix this
+  if (true) // TODO fix this
     this->uart_rx_handler = &DeskMaster::read_uart;
   else
     this->uart_rx_handler = &DeskMaster::read_uart_sw;
@@ -100,10 +100,6 @@ void DeskMaster::send_height(uint16_t height){
 }
 
 void DeskMaster::read_uart(){
-  // TODO implement a hardware-only read handler
-  this->read_uart_sw();
-  return;
-
   const uint32_t now = millis();
   static uint32_t last_byte_received = 0;
 
@@ -111,12 +107,18 @@ void DeskMaster::read_uart(){
   static uint8_t uart_data[] = {0,0,0,0};
 
   // if a new byte has not been received in RX_INTERVAL_TIMEOUT ms, clear the buffer
-  if (now - last_byte_received >= RX_INTERVAL_TIMEOUT)
+  if (last_byte_received != 0 && now - last_byte_received >= RX_INTERVAL_TIMEOUT){
+    ESP_LOGD(TAG, "clearing RX buffer of the following state:");
+    this->log_data(uart_data);
     uart_data[0] = uart_data[1] = uart_data[2] = uart_data[3] = 0;
+    data_index = 0;
+    last_byte_received = 0;
+  }
 
 
   while (this->available()) {
     this->read_byte(&(uart_data[data_index]));
+    last_byte_received = now;
 
     if (PASSTHROUGH) {
       this->write_byte(uart_data[data_index]);
@@ -124,20 +126,16 @@ void DeskMaster::read_uart(){
 
     // if there is a full buffer, parse/use the data
     if (data_index == 3){
+      this->log_data(uart_data);
       // height data
       if (uart_data[1] == 1 && uart_data[2] == 1){
-        uint16_t height = (uart_data[2] << 8) + uart_data[3];
-        ESP_LOGD(TAG, "height value: %hu", height); // TODO remove
+        uint16_t height = (uart_data[3] << 8) + uart_data[0];
+        // ESP_LOGD(TAG, "height: %hu", height); // TODO remove
         // only update the height if it has changed
         if (this->current_pos_ != height) {
-          // filter out erroneous heights (too large of a delta to be possible)
-          if (this->current_pos_ == 0 || (this->current_pos_ - height < HEIGHT_MAX_DIFF && height - this->current_pos_ < HEIGHT_MAX_DIFF)){
-            this->current_pos_ = height;
-            if (this->height_sensor_ != nullptr)
-              this->height_sensor_->publish_state(height);
-          } else {
-            ESP_LOGD(TAG, "bad height of %d, ignoring", height);
-          }
+          this->current_pos_ = height;
+          if (this->height_sensor_ != nullptr)
+            this->height_sensor_->publish_state(height);
         }
       }
       else if (false){
@@ -200,6 +198,17 @@ void DeskMaster::read_uart_sw(){
         break;
     }
   }
+}
+
+void DeskMaster::log_data(uint8_t* data){
+  std::string res;
+  for (size_t i = 0; i < 4; i++) {
+    if (i > 0) {
+      res += ",";
+    }
+    res += to_string(data[i]);
+  }
+  ESP_LOGD(TAG, "UART packet: %s", res.c_str());
 }
 
 }  // namespace deskmaster

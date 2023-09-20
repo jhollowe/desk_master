@@ -57,6 +57,9 @@ class DeskMaster: public Component, public sensor::Sensor, public uart::UARTDevi
     int timeout_{-1};
     uint64_t start_time_;
     uint64_t request_time_{0};
+
+  private:
+    void log_data(uint8_t* data);
 };
 
 }  // namespace deskmaster
