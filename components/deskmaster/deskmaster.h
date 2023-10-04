@@ -41,6 +41,12 @@ class DeskMaster: public Component, public sensor::Sensor, public uart::UARTDevi
     void set_down_pin(GPIOPin *pin) { this->down_pin_ = pin; }
     void set_request_pin(GPIOPin *pin) { this->request_pin_ = pin; }
 
+    // display (passthrough) pin setters
+    void set_p_up_pin(GPIOPin *pin) { this->p_up_pin_ = pin; }
+    void set_p_down_pin(GPIOPin *pin) { this->p_down_pin_ = pin; }
+    void set_p_mode_pin(GPIOPin *pin) { this->p_mode_pin_ = pin; }
+    void set_p_preset_pin(GPIOPin *pin) { this->p_preset_pin_ = pin; }
+
     void move_to(int height);
     void stop();
 
@@ -63,6 +69,12 @@ class DeskMaster: public Component, public sensor::Sensor, public uart::UARTDevi
     GPIOPin *mode_pin_{nullptr};
     GPIOPin *preset_pin_{nullptr};
     GPIOPin *request_pin_{nullptr};
+
+    // display (passthrough) pin
+    GPIOPin *p_up_pin_{nullptr};
+    GPIOPin *p_down_pin_{nullptr};
+    GPIOPin *p_mode_pin_{nullptr};
+    GPIOPin *p_preset_pin_{nullptr};
 
     // settings and state variables
     int stopping_distance_;

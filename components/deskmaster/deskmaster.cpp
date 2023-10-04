@@ -98,6 +98,10 @@ void DeskMaster::send_height(uint16_t height){
   this->write_array(data, 4);
 }
 
+void DeskMaster::passthrough_buttons(){
+
+}
+
 void DeskMaster::read_uart(){
   const uint32_t now = millis();
   static uint32_t last_byte_received = 0;

@@ -18,6 +18,17 @@ CONF_PRESET = "preset"
 CONF_REQUEST = "request"
 CONF_STOPPING_DISTANCE = "stopping_distance"
 CONF_HW_UART = "hw_uart"
+CONF_PASSTHROUGH = "passthrough"
+
+PASSTHROUGH_SCHEMA = cv.Schema(
+    {
+        cv.Optional(CONF_UP): pins.gpio_input_pin_schema,
+        cv.Optional(CONF_DOWN): pins.gpio_input_pin_schema,
+        cv.Optional(CONF_MODE): pins.gpio_input_pin_schema,
+        cv.Optional(CONF_PRESET): pins.gpio_input_pin_schema,
+    }
+)
+
 
 CONFIG_SCHEMA = cv.COMPONENT_SCHEMA.extend(
     {
@@ -34,10 +45,25 @@ CONFIG_SCHEMA = cv.COMPONENT_SCHEMA.extend(
         cv.Optional(CONF_HEIGHT): sensor.sensor_schema(
             icon=ICON_GAUGE, accuracy_decimals=0, unit_of_measurement="mm"
         ),
-        cv.Optional(CONF_STOPPING_DISTANCE, default=15): cv.positive_int,
-        cv.Optional(CONF_TIMEOUT): cv.time_period,
+        # passthrough
+        cv.Optional(CONF_PASSTHROUGH): PASSTHROUGH_SCHEMA,
     }
 ).extend(uart.UART_DEVICE_SCHEMA)
+
+
+async def passthrough_to_code(config, parent):
+    if CONF_UP in config:
+        pin = await cg.gpio_pin_expression(config[CONF_UP])
+        cg.add(parent.set_p_up_pin(pin))
+    if CONF_DOWN in config:
+        pin = await cg.gpio_pin_expression(config[CONF_DOWN])
+        cg.add(parent.set_p_down_pin(pin))
+    if CONF_MODE in config:
+        pin = await cg.gpio_pin_expression(config[CONF_MODE])
+        cg.add(parent.set_p_mode_pin(pin))
+    if CONF_PRESET in config:
+        pin = await cg.gpio_pin_expression(config[CONF_PRESET])
+        cg.add(parent.set_p_preset_pin(pin))
 
 
 async def to_code(config):
@@ -71,3 +97,6 @@ async def to_code(config):
     cg.add(var.set_stopping_distance(config[CONF_STOPPING_DISTANCE]))
     if CONF_TIMEOUT in config:
         cg.add(var.set_timeout(config[CONF_TIMEOUT].total_milliseconds))
+
+    if CONF_PASSTHROUGH in config:
+        await passthrough_to_code(config[CONF_PASSTHROUGH], var)
