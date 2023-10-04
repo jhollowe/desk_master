@@ -20,6 +20,7 @@ const char *dM_operation_to_str(DMOperation op) {
 }
 
 void DeskMaster::setup() {
+  // setup pins and set to false
   if (this->up_pin_ != nullptr)
     this->up_pin_->digital_write(false);
   if (this->down_pin_ != nullptr)
@@ -28,11 +29,6 @@ void DeskMaster::setup() {
     this->request_pin_->digital_write(true);
     this->request_time_ = millis();
   }
-  // if (this->hw_serial_ != nullptr )
-  if (true) // TODO fix this
-    this->uart_rx_handler = &DeskMaster::read_uart;
-  else
-    this->uart_rx_handler = &DeskMaster::read_uart_sw;
 
   // TODO bounce the request pin (if present) to get the current height
 }

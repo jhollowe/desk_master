@@ -31,6 +31,7 @@ class DeskMaster: public Component, public sensor::Sensor, public uart::UARTDevi
     // general settings setters
     void set_stopping_distance(int distance) { this->stopping_distance_ = distance; }
     void set_timeout(int timeout) { this->timeout_ = timeout; }
+    void set_hw_uart(boolean hw_uart) { this->uart_rx_handler = hw_uart ? &DeskMaster::read_uart : &DeskMaster::read_uart_sw; }
 
     // Sensor setters
     void set_height_sensor(sensor::Sensor *sensor) { this->height_sensor_ = sensor; }
