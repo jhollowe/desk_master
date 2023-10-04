@@ -20,11 +20,17 @@ const char *dM_operation_to_str(DMOperation op) {
 }
 
 void DeskMaster::setup() {
+  // Initialize switches to "OFF" (should be floating/pulled high)
+  if (this->up_switch_ != nullptr)
+    this->up_switch_->turn_off();
+  if (this->down_switch_ != nullptr)
+    this->down_switch_->turn_off();
+  if (this->mode_switch_ != nullptr)
+    this->mode_switch_->turn_off();
+  if (this->preset_switch_ != nullptr)
+    this->preset_switch_->turn_off();
+
   // setup pins and set to false
-  if (this->up_pin_ != nullptr)
-    this->up_pin_->digital_write(false);
-  if (this->down_pin_ != nullptr)
-    this->down_pin_->digital_write(false);
   if (this->request_pin_ != nullptr) {
     this->request_pin_->digital_write(true);
     this->request_time_ = millis();
@@ -56,10 +62,11 @@ void DeskMaster::loop() {
 void DeskMaster::dump_config() {
   ESP_LOGCONFIG(TAG, "DeskMaster desk:");
   LOG_SENSOR("", "Height", this->height_sensor_);
-  LOG_PIN("Up pin: ", this->up_pin_);
-  LOG_PIN("Down pin: ", this->down_pin_);
-  LOG_PIN("Preset pin: ", this->preset_pin_);
-  LOG_PIN("Mode pin: ", this->mode_pin_);
+  // TODO fix this to properly log these switches
+  // LOG_SWITCH("Up switch: ", this->up_switch_);
+  // LOG_SWITCH("Down switch: ", this->down_switch_);
+  // LOG_SWITCH("Preset switch: ", this->preset_switch_);
+  // LOG_SWITCH("Mode switch: ", this->mode_switch_);
   LOG_PIN("Request pin: ", this->request_pin_);
 }
 
@@ -67,14 +74,14 @@ void DeskMaster::move_to(int target_pos) {
   if (abs(target_pos - this->current_pos_) < this->stopping_distance_)
     return;
   if (target_pos > this->current_pos_) {
-    if (this->up_pin_ == nullptr)
+    if (this->up_switch_ == nullptr)
       return;
-    this->up_pin_->digital_write(true);
+    this->up_switch_->turn_on();
     this->current_operation = DM_OPERATION_RAISING;
   } else {
-    if (this->down_pin_ == nullptr)
+    if (this->down_switch_ == nullptr)
       return;
-    this->down_pin_->digital_write(true);
+    this->down_switch_->turn_on();
     this->current_operation = DM_OPERATION_LOWERING;
   }
   this->target_pos_ = target_pos;
@@ -84,16 +91,15 @@ void DeskMaster::move_to(int target_pos) {
 
 void DeskMaster::stop() {
   this->target_pos_ = -1;
-  if (this->up_pin_ != nullptr)
-    this->up_pin_->digital_write(false);
-  if (this->down_pin_ != nullptr)
-    this->down_pin_->digital_write(false);
+  if (this->up_switch_ != nullptr)
+    this->up_switch_->turn_off();
+  if (this->down_switch_ != nullptr)
+    this->down_switch_->turn_off();
   // TODO clear preset2 button
   this->current_operation = DM_OPERATION_IDLE;
 }
 
 void DeskMaster::send_height(uint16_t height){
-  // TODO fix compiler warning
   uint8_t data[] = {1,1,static_cast<uint8_t>(height & 0xff00) >> 8, static_cast<uint8_t>(height & 0xff)};
   this->write_array(data, 4);
 }

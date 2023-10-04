@@ -1,7 +1,7 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome import pins
-from esphome.components import sensor, uart
+from esphome.components import sensor, switch, uart
 from esphome.const import CONF_HEIGHT, CONF_ID, CONF_TIMEOUT, ICON_GAUGE
 
 DEPENDENCIES = ["uart"]
@@ -37,9 +37,11 @@ CONFIG_SCHEMA = cv.COMPONENT_SCHEMA.extend(
         cv.Optional(CONF_HW_UART, default=True): cv.boolean,
         cv.Optional(CONF_STOPPING_DISTANCE, default=15): cv.positive_int,
         cv.Optional(CONF_TIMEOUT): cv.time_period,
-        # Output (controller) pins
-        cv.Optional(CONF_UP): pins.gpio_output_pin_schema,
-        cv.Optional(CONF_DOWN): pins.gpio_output_pin_schema,
+        # Output (controller) pins/switches
+        cv.Optional(CONF_UP): cv.use_id(switch.Switch),
+        cv.Optional(CONF_DOWN): cv.use_id(switch.Switch),
+        cv.Optional(CONF_MODE): cv.use_id(switch.Switch),
+        cv.Optional(CONF_PRESET): cv.use_id(switch.Switch),
         cv.Optional(CONF_REQUEST): pins.gpio_output_pin_schema,
         # Sensors
         cv.Optional(CONF_HEIGHT): sensor.sensor_schema(
@@ -73,17 +75,17 @@ async def to_code(config):
 
     # PINS
     if CONF_UP in config:
-        pin = await cg.gpio_pin_expression(config[CONF_UP])
-        cg.add(var.set_up_pin(pin))
+        sw = await cg.get_variable(config[CONF_UP])
+        cg.add(var.set_up_switch(sw))
     if CONF_DOWN in config:
-        pin = await cg.gpio_pin_expression(config[CONF_DOWN])
-        cg.add(var.set_down_pin(pin))
+        sw = await cg.get_variable(config[CONF_DOWN])
+        cg.add(var.set_down_switch(sw))
     if CONF_MODE in config:
-        pin = await cg.gpio_pin_expression(config[CONF_MODE])
-        cg.add(var.set_mode_pin(pin))
+        sw = await cg.get_variable(config[CONF_MODE])
+        cg.add(var.set_mode_switch(sw))
     if CONF_PRESET in config:
-        pin = await cg.gpio_pin_expression(config[CONF_PRESET])
-        cg.add(var.set_preset_pin(pin))
+        sw = await cg.get_variable(config[CONF_PRESET])
+        cg.add(var.set_preset_switch(sw))
     if CONF_REQUEST in config:
         pin = await cg.gpio_pin_expression(config[CONF_REQUEST])
         cg.add(var.set_request_pin(pin))

@@ -2,6 +2,7 @@
 
 #include "esphome/core/component.h"
 #include "esphome/components/sensor/sensor.h"
+#include "esphome/components/switch/switch.h"
 #include "esphome/components/uart/uart.h"
 #include "esphome/core/hal.h"
 
@@ -9,6 +10,8 @@ namespace esphome {
 namespace deskmaster {
 #define HEIGHT_MAX_DIFF 15
 #define RX_INTERVAL_TIMEOUT 200
+
+
 
 // TODO change to switch
 #define PASSTHROUGH true
@@ -37,8 +40,10 @@ class DeskMaster: public Component, public sensor::Sensor, public uart::UARTDevi
     void set_height_sensor(sensor::Sensor *sensor) { this->height_sensor_ = sensor; }
 
     // controller pin setters
-    void set_up_pin(GPIOPin *pin) { this->up_pin_ = pin; }
-    void set_down_pin(GPIOPin *pin) { this->down_pin_ = pin; }
+    void set_up_switch(switch_::Switch *sw) { this->up_switch_ = sw; }
+    void set_down_switch(switch_::Switch *sw) { this->down_switch_ = sw; }
+    void set_mode_switch(switch_::Switch *sw) { this->mode_switch_ = sw; }
+    void set_preset_switch(switch_::Switch *sw) { this->preset_switch_ = sw; }
     void set_request_pin(GPIOPin *pin) { this->request_pin_ = pin; }
 
     // display (passthrough) pin setters
@@ -63,12 +68,12 @@ class DeskMaster: public Component, public sensor::Sensor, public uart::UARTDevi
     // sensors
     sensor::Sensor *height_sensor_{nullptr};
 
-    // controller pin
-    GPIOPin *up_pin_{nullptr};
-    GPIOPin *down_pin_{nullptr};
-    GPIOPin *mode_pin_{nullptr};
-    GPIOPin *preset_pin_{nullptr};
+    // controller pins/switches
     GPIOPin *request_pin_{nullptr};
+    switch_::Switch *up_switch_{nullptr};
+    switch_::Switch *down_switch_{nullptr};
+    switch_::Switch *mode_switch_{nullptr};
+    switch_::Switch *preset_switch_{nullptr};
 
     // display (passthrough) pin
     GPIOPin *p_up_pin_{nullptr};
