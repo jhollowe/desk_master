@@ -28,12 +28,17 @@ class DeskMaster: public Component, public sensor::Sensor, public uart::UARTDevi
     void loop() override;
     void dump_config() override;
 
+    // general settings setters
+    void set_stopping_distance(int distance) { this->stopping_distance_ = distance; }
+    void set_timeout(int timeout) { this->timeout_ = timeout; }
+
+    // Sensor setters
     void set_height_sensor(sensor::Sensor *sensor) { this->height_sensor_ = sensor; }
+
+    // controller pin setters
     void set_up_pin(GPIOPin *pin) { this->up_pin_ = pin; }
     void set_down_pin(GPIOPin *pin) { this->down_pin_ = pin; }
     void set_request_pin(GPIOPin *pin) { this->request_pin_ = pin; }
-    void set_stopping_distance(int distance) { this->stopping_distance_ = distance; }
-    void set_timeout(int timeout) { this->timeout_ = timeout; }
 
     void move_to(int height);
     void stop();
@@ -44,13 +49,21 @@ class DeskMaster: public Component, public sensor::Sensor, public uart::UARTDevi
     void send_height(uint16_t height);
     void read_uart();
     void read_uart_sw();
+    void passthrough_buttons();
 
     void (DeskMaster::*uart_rx_handler)(); // function pointer which is either read_uart or read_uart_sw
 
+    // sensors
     sensor::Sensor *height_sensor_{nullptr};
+
+    // controller pin
     GPIOPin *up_pin_{nullptr};
     GPIOPin *down_pin_{nullptr};
+    GPIOPin *mode_pin_{nullptr};
+    GPIOPin *preset_pin_{nullptr};
     GPIOPin *request_pin_{nullptr};
+
+    // settings and state variables
     int stopping_distance_;
     int current_pos_{0};
     int target_pos_{-1};

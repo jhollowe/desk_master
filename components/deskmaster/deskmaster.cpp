@@ -43,6 +43,7 @@ void DeskMaster::loop() {
   // SW provides limited functionality since it is less reliable and more has to be done to sanitize the data
   (this->*uart_rx_handler)();
 
+  // Control manual (non-preset) movement
   if (this->target_pos_ >= 0) {
     if (abs(this->target_pos_ - this->current_pos_) < this->stopping_distance_)
       this->stop();
@@ -61,6 +62,8 @@ void DeskMaster::dump_config() {
   LOG_SENSOR("", "Height", this->height_sensor_);
   LOG_PIN("Up pin: ", this->up_pin_);
   LOG_PIN("Down pin: ", this->down_pin_);
+  LOG_PIN("Preset pin: ", this->preset_pin_);
+  LOG_PIN("Mode pin: ", this->mode_pin_);
   LOG_PIN("Request pin: ", this->request_pin_);
 }
 
@@ -95,7 +98,7 @@ void DeskMaster::stop() {
 
 void DeskMaster::send_height(uint16_t height){
   // TODO fix compiler warning
-  uint8_t data[] = {1,1,(height & 0xff00) >> 8, height & 0xff};
+  uint8_t data[] = {1,1,static_cast<uint8_t>(height & 0xff00) >> 8, static_cast<uint8_t>(height & 0xff)};
   this->write_array(data, 4);
 }
 
