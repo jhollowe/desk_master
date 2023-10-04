@@ -20,7 +20,8 @@
 				"ms-vscode.cpptools",
 				"editorconfig.editorconfig",
 				"mhutchie.git-graph",
-				"streetsidesoftware.code-spell-checker"
+				"streetsidesoftware.code-spell-checker",
+				"ESPHome.esphome-vscode"
 			],
 			"settings": {
 				"python.languageServer": "Pylance",
